@@ -64,6 +64,13 @@ td.click{cursor:pointer}
 td input{width:3.6em;font:inherit;text-align:center;border:2px solid #dde3ea;border-radius:8px;padding:2px;color:inherit;
   -webkit-user-select:text;user-select:text}
 #jibun{display:none;flex:1;flex-direction:column;gap:10px}
+.stp{display:flex;align-items:center;gap:8px;font-weight:900;font-size:19px;color:var(--sub);transition:color .2s}
+.stp .no{width:30px;height:30px;border-radius:50%;background:#e3e8ee;color:#fff;display:grid;place-items:center;font-size:17px;flex:none;transition:background .2s}
+.stp.now{color:var(--ink)}.stp.now .no{background:var(--accent)}
+.stp.done .no{background:var(--mul)}.stp.done .no::after{content:'✓';position:absolute}.stp.done .no{color:transparent;position:relative}.stp.done .no::after{color:#fff}
+.stp.now .arrow{display:inline-block;animation:nudge 1s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateX(6px)}}
+.sub3{font-size:15px;font-weight:700;color:var(--sub);margin:-4px 0 0 38px;line-height:1.6}.sub3 .tx{color:var(--x)}.sub3 .ty{color:var(--y)}
 #jibun textarea{width:100%;flex:1;min-height:80px;font:inherit;font-size:22px;font-weight:700;border:3px dashed #c9b8a8;border-radius:14px;
   padding:10px;background:#fffbe8;color:var(--ink);resize:none;-webkit-user-select:text;user-select:text}
 .names{display:flex;gap:10px;flex-wrap:wrap}
@@ -93,11 +100,15 @@ body.isJibun #jibun{display:flex}
     <div class="card" id="sentence"></div>
     <div class="card pic"><canvas id="pic"></canvas></div>
     <div class="card" id="jibun">
+      <div class="stp" id="st1"><span class="no">1</span><span class="tt">場面を書こう</span></div>
+      <textarea id="jtext" placeholder="れい：ピザ1まいを ◯人で 分ける"></textarea>
+      <div class="stp" id="st2"><span class="no">2</span><span class="tt">かわる2つに 名前をつけよう</span></div>
       <div class="names">
-        <label class="lx"><span class="dot" style="background:var(--x)"></span><input id="jx" placeholder="青の名前"></label>
-        <label class="ly"><span class="dot" style="background:var(--y)"></span><input id="jy" placeholder="オレンジの名前"></label>
+        <label class="lx"><span class="dot" style="background:var(--x)"></span><input id="jx" placeholder="れい：人数"></label>
+        <label class="ly"><span class="dot" style="background:var(--y)"></span><input id="jy" placeholder="れい：1人分"></label>
       </div>
-      <textarea id="jtext" placeholder="場面を書こう&#10;れい：ピザ1まいを◯人で分ける"></textarea>
+      <div class="stp" id="st3"><span class="no">3</span><span class="tt">右の表に 数を入れよう <b class="arrow">→</b></span></div>
+      <div class="sub3">点が グラフに 出るよ。そろったら <b class="ty">オレンジ</b>÷<b class="tx">青</b> と <b class="tx">青</b>×<b class="ty">オレンジ</b> で しらべよう</div>
     </div>
     <div class="card xctl">
       <button class="pm" id="minus">−</button>
@@ -246,10 +257,12 @@ function buildJibun(){
   const J=st.jibun;$('#jtext').value=J.text;$('#jx').value=J.xs;$('#jy').value=J.ys;
   $('#snap').style.display='none';buildTableJ();render();showSentenceJ();
 }
-function showSentenceJ(){const J=st.jibun;$('#sentence').textContent=J.text.trim()?J.text:'✏️ 下に場面を書こう'}
+function stepsJ(){const J=st.jibun,d=[!!J.text.trim(),!!(J.xs.trim()&&J.ys.trim()),ptsJ().length>=2];
+  const now=d.indexOf(false);[1,2,3].forEach(i=>{const e=$('#st'+i);e.classList.toggle('done',d[i-1]);e.classList.toggle('now',i-1===now)})}
+function showSentenceJ(){stepsJ();const J=st.jibun;$('#sentence').textContent=J.text.trim()?J.text:'✏️ 下に場面を書こう'}
 $('#jtext').oninput=e=>{st.jibun.text=e.target.value;showSentenceJ();saveJ()};
-$('#jx').oninput=e=>{st.jibun.xs=e.target.value;saveJ();buildTableJ();drawGraphJ()};
-$('#jy').oninput=e=>{st.jibun.ys=e.target.value;saveJ();buildTableJ();drawGraphJ()};
+$('#jx').oninput=e=>{st.jibun.xs=e.target.value;saveJ();stepsJ();buildTableJ();drawGraphJ()};
+$('#jy').oninput=e=>{st.jibun.ys=e.target.value;saveJ();stepsJ();buildTableJ();drawGraphJ()};
 const jx=()=>st.jibun.xs.trim()||'青', jy=()=>st.jibun.ys.trim()||'オレンジ';
 const num=v=>{if(v===''||v===null)return null;const n=Number(String(v).replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));return isFinite(n)?n:null};
 function buildTableJ(){
@@ -259,7 +272,7 @@ function buildTableJ(){
   if(showDiv)h+=`<tr class="rd"><th><span class="cy">${esc(jy())}</span> ÷ <span class="cx">${esc(jx())}</span></th>`+J.rows.map((r,i)=>`<td id="jd${i}"></td>`).join('')+'</tr>';
   if(showMul)h+=`<tr class="rm"><th><span class="cx">${esc(jx())}</span> × <span class="cy">${esc(jy())}</span></th>`+J.rows.map((r,i)=>`<td id="jm${i}"></td>`).join('')+'</tr>';
   h+='</table>';$('#twrap').innerHTML=h;
-  $('#twrap').querySelectorAll('input').forEach(inp=>{halfOnly(inp,true);inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ()}});
+  $('#twrap').querySelectorAll('input').forEach(inp=>{halfOnly(inp,true);inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ();stepsJ()}});
   renderTableJ();
 }
 function renderTableJ(){
@@ -434,7 +447,7 @@ $('#bdiv').onclick=tog(()=>showDiv=!showDiv);$('#bmul').onclick=tog(()=>showMul=
 $('#badd').onclick=()=>{tap();st.jibun.rows.push({x:'',y:''});saveJ();buildTableJ();drawGraphJ();const w=$('#twrap');w.scrollLeft=w.scrollWidth};
 $('#bclear').onclick=()=>{
   if(!confirm('表の数をけしますか？'))return;
-  if(cur.id==='jibun'){st.jibun.rows=[{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];saveJ();buildTableJ();drawGraphJ();return}
+  if(cur.id==='jibun'){st.jibun.rows=[{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];saveJ();buildTableJ();drawGraphJ();stepsJ();return}
   st[cur.id].rows.clear();record();render()};
 document.addEventListener('keydown',e=>{
   const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
