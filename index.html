@@ -123,6 +123,16 @@ body.isJibun #jibun{display:flex}
 </main>
 <script>
 const $=s=>document.querySelector(s);
+// 数字の入力欄：全角で打っても、確定した瞬間に半角の数字だけにする
+function halfOnly(inp,dot){
+  const fix=()=>{let v=inp.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[．。，、]/g,'.');
+    v=dot?v.replace(/[^\d.]/g,'').replace(/(\..*)\./g,'$1'):v.replace(/\D/g,'');
+    if(v!==inp.value){inp.value=v;inp.dispatchEvent(new Event('input'))}};
+  inp.lang='en';inp.autocomplete='off';inp.spellcheck=false;
+  inp.addEventListener('compositionend',()=>setTimeout(fix));
+  inp.addEventListener('input',e=>{if(!e.isComposing)fix()});
+  inp.addEventListener('focus',()=>inp.select());
+}
 
 /* ---------- 場面 ---------- */
 // 種類（比例・反比例など）は画面に出さない。決めるのは子ども。
@@ -200,7 +210,7 @@ function buildSentence(){
     inp.onchange=()=>{let v=Math.round(Number(inp.value.replace(/[^\d.]/g,'')));
       if(!v||v<1)v=cur.p[t.p];v=Math.min(v,cur.pmax[t.p]);inp.value=v;S.p[t.p]=v;
       S.rows.clear();S.x=Math.min(Math.max(S.x,cur.xmin),cur.xmax(S.p));S.x=nearest(cur,S.x);record();render()};
-    inp.onkeydown=e=>{if(e.key==='Enter')inp.blur()};
+    inp.onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing)inp.blur()};halfOnly(inp,false);
     el.appendChild(inp);
   });
 }
@@ -249,7 +259,7 @@ function buildTableJ(){
   if(showDiv)h+=`<tr class="rd"><th><span class="cy">${esc(jy())}</span> ÷ <span class="cx">${esc(jx())}</span></th>`+J.rows.map((r,i)=>`<td id="jd${i}"></td>`).join('')+'</tr>';
   if(showMul)h+=`<tr class="rm"><th><span class="cx">${esc(jx())}</span> × <span class="cy">${esc(jy())}</span></th>`+J.rows.map((r,i)=>`<td id="jm${i}"></td>`).join('')+'</tr>';
   h+='</table>';$('#twrap').innerHTML=h;
-  $('#twrap').querySelectorAll('input').forEach(inp=>inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ()});
+  $('#twrap').querySelectorAll('input').forEach(inp=>{halfOnly(inp,true);inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ()}});
   renderTableJ();
 }
 function renderTableJ(){
