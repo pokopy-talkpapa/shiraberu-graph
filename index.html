@@ -396,15 +396,22 @@ function drawChokin(ctx,w,h,x,y,p){
     if(hd>14)label(ctx,i+'日目',bx+bw/2,yy-hd/2,'#fff',Math.min(16,hd*.7));yy-=hd}
   label(ctx,fmt(y)+'円',bx+bw+10,yy,'#F7931E',20,'left');
 }
-function drawRect(ctx,w,h,x,y){
-  const u=Math.min((w-70)/y,(h-60)/x),rw=y*u,rh=x*u,ox=(w-rw)/2+16,oy=(h-rh)/2-6;
+function drawRect(ctx,w,h,x,y,p){
+  // 縮尺は面積ごとに固定（たてを動かしても1cmの大きさは変わらない）。左下の角をそろえて、形だけが変わるのを見せる
+  // 細長くて枠に入らないときは、はみ出した先を切って「つづく」の矢印を出す
+  const ox=64,bot=h-34,W=w-ox-16,H=bot-12,u=Math.min(W,H)/(2.2*Math.sqrt(p.s));
+  const rw=y*u,rh=x*u,oy=bot-rh,cw=Math.min(rw,W),ch=Math.min(rh,H),cy=bot-ch;
+  ctx.save();ctx.beginPath();ctx.rect(ox-4,bot-H,W+8,H+4);ctx.clip();
   ctx.fillStyle='#fff4d6';ctx.fillRect(ox,oy,rw,rh);
-  if(u>=6){ctx.strokeStyle='#f0d9a8';ctx.lineWidth=1;for(let i=1;i<y;i++){ctx.beginPath();ctx.moveTo(ox+i*u,oy);ctx.lineTo(ox+i*u,oy+rh);ctx.stroke()}
+  if(u>=6){ctx.strokeStyle='#f0d9a8';ctx.lineWidth=1;for(let i=1;i<y;i++){ctx.beginPath();ctx.moveTo(ox+i*u,oy);ctx.lineTo(ox+i*u,bot);ctx.stroke()}
     for(let j=1;j<x;j++){ctx.beginPath();ctx.moveTo(ox,oy+j*u);ctx.lineTo(ox+rw,oy+j*u);ctx.stroke()}}
   ctx.strokeStyle='#3C2415';ctx.lineWidth=3;ctx.strokeRect(ox,oy,rw,rh);
-  ctx.lineWidth=6;ctx.lineCap='round';ctx.strokeStyle='#0aa5e8';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+rh);ctx.stroke();
-  ctx.strokeStyle='#F7931E';ctx.beginPath();ctx.moveTo(ox,oy+rh);ctx.lineTo(ox+rw,oy+rh);ctx.stroke();
-  label(ctx,'たて '+x,ox-8,oy+rh/2,'#0aa5e8',16,'right');label(ctx,'よこ '+fmt(y),ox+rw/2,oy+rh+20,'#F7931E',16);
+  ctx.lineWidth=6;ctx.lineCap='round';ctx.strokeStyle='#0aa5e8';ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,bot);ctx.stroke();
+  ctx.strokeStyle='#F7931E';ctx.beginPath();ctx.moveTo(ox,bot);ctx.lineTo(ox+rw,bot);ctx.stroke();
+  ctx.restore();
+  if(rw>W)label(ctx,'つづく →',ox+W-4,bot-ch/2,'#7a685f',16,'right');
+  if(rh>H)label(ctx,'↑ つづく',ox+cw/2+(cw<90?50:0),bot-H+14,'#7a685f',16,cw<90?'left':'center');
+  label(ctx,'たて '+x,ox-8,cy+ch/2,'#0aa5e8',16,'right');label(ctx,'よこ '+fmt(y),ox+cw/2,bot+20,'#F7931E',16);
 }
 function drawSquare(ctx,w,h,x){
   const u=Math.min(w-80,h-60)/10,s=x*u,ox=(w-10*u)/2+20,oy=(h-10*u)/2-8;
