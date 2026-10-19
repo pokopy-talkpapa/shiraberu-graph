@@ -49,7 +49,8 @@ input[type=range]{flex:1;accent-color:var(--x);height:36px;min-width:60px}
 .tb{border:0;border-radius:14px;min-width:56px;min-height:44px;padding:4px 12px;font-size:22px;font-weight:900;
   background:#eef3f7;color:var(--sub);box-shadow:0 3px 0 rgba(0,0,0,.12)}
 .tb:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.12)}
-.tb.d.on{background:var(--div);color:#fff}.tb.m.on{background:var(--mul);color:#fff}.tb.l.on{background:var(--ink);color:#fff}
+.tb.d,.tb.m{font-size:18px;border:3px solid transparent}.tb .tx{color:var(--x)}.tb .ty{color:var(--y)}
+.tb.d.on{background:#f1ebff;border-color:var(--div);color:var(--div)}.tb.m.on{background:#e6f7ec;border-color:var(--mul);color:var(--mul)}.tb.l.on{background:var(--ink);color:#fff}
 .tb.small{font-size:16px}
 .sp{flex:1}
 .twrap{overflow:auto;flex:1;min-height:0}
@@ -109,8 +110,8 @@ body.isJibun #jibun{display:flex}
     <div class="card graph"><canvas id="graph"></canvas></div>
     <div class="card tablecard">
       <div class="tools">
-        <button class="tb d" id="bdiv">÷</button>
-        <button class="tb m" id="bmul">×</button>
+        <button class="tb d" id="bdiv"><b class="ty">オレンジ</b> ÷ <b class="tx">青</b></button>
+        <button class="tb m" id="bmul"><b class="tx">青</b> × <b class="ty">オレンジ</b></button>
         <button class="tb l small" id="bline">点をつなぐ</button>
         <span class="sp"></span>
         <button class="tb small" id="badd" style="display:none">＋列</button>
