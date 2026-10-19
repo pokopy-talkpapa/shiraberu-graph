@@ -123,14 +123,14 @@ body.isJibun #jibun{display:flex}
 </main>
 <script>
 const $=s=>document.querySelector(s);
-// 数字の入力欄：全角で打っても、確定した瞬間に半角の数字だけにする
+// 数字の入力欄：全角で打っても、打った瞬間に半角の数字だけにする（部屋番号の欄と同じ）
 function halfOnly(inp,dot){
   const fix=()=>{let v=inp.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[．。，、]/g,'.');
     v=dot?v.replace(/[^\d.]/g,'').replace(/(\..*)\./g,'$1'):v.replace(/\D/g,'');
     if(v!==inp.value){inp.value=v;inp.dispatchEvent(new Event('input'))}};
   inp.lang='en';inp.autocomplete='off';inp.spellcheck=false;
   inp.addEventListener('compositionend',()=>setTimeout(fix));
-  inp.addEventListener('input',e=>{if(!e.isComposing)fix()});
+  inp.addEventListener('input',fix);
   inp.addEventListener('focus',()=>inp.select());
 }
 
