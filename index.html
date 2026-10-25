@@ -307,10 +307,12 @@ function drawAxes(ctx,w,h,xmax,ymax,xstep,ystep,xl,yl){
   ctx.fillStyle='#F7931E';ctx.textAlign='left';ctx.fillText('↑ '+yl,L+4,T-16);
   return {L,T,gw,gh,X,Y,xmax,ymax};
 }
-function drawPts(ctx,g,pts,curp){
+function drawPts(ctx,g,pts,curp,start){
   const ps=pts.filter(p=>p.x<=g.xmax+1e-9&&p.y<=g.ymax+1e-9).sort((a,b)=>a.x-b.x);
-  if(showLine&&ps.length>1){ctx.strokeStyle='#3C2415';ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.beginPath();
-    ps.forEach((p,i)=>i?ctx.lineTo(g.X(p.x),g.Y(p.y)):ctx.moveTo(g.X(p.x),g.Y(p.y)));ctx.stroke()}
+  // 線は青が0のところから引く（0が決まる場面だけ）。比例かどうかは判定しない
+  const ln=start&&ps.length&&ps[0].x>0?[start,...ps]:ps;
+  if(showLine&&ln.length>1){ctx.strokeStyle='#3C2415';ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.beginPath();
+    ln.forEach((p,i)=>i?ctx.lineTo(g.X(p.x),g.Y(p.y)):ctx.moveTo(g.X(p.x),g.Y(p.y)));ctx.stroke()}
   if(curp){
     ctx.setLineDash([6,5]);ctx.lineWidth=2.5;
     ctx.strokeStyle='#0aa5e8';ctx.beginPath();ctx.moveTo(g.X(curp.x),g.Y(curp.y));ctx.lineTo(g.X(curp.x),g.T+g.gh);ctx.stroke();
@@ -335,7 +337,7 @@ function drawGraph(){
   const XM=Math.ceil(xmax/xs)*xs;
   G=drawAxes(ctx,w,h,XM,Y.max,xs,Y.step,cur.xs+'（'+cur.xu+'）',cur.ys+'（'+cur.yu+'）');
   const pts=[...S.rows].map(([x,y])=>({x,y}));
-  drawPts(ctx,G,pts,{x:S.x,y:cur.f(S.x,p)});
+  drawPts(ctx,G,pts,{x:S.x,y:cur.f(S.x,p)},cur.xmin===0?{x:0,y:cur.f(0,p)}:null);
 }
 function drawGraphJ(){
   const [ctx,w,h]=fit($('#graph')),pts=ptsJ();
