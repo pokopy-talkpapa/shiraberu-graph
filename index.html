@@ -71,13 +71,22 @@ td input{width:3.6em;font:inherit;text-align:center;border:2px solid #dde3ea;bor
 .stp.now .arrow{display:inline-block;animation:nudge 1s ease-in-out infinite}
 @keyframes nudge{50%{transform:translateX(6px)}}
 .sub3{font-size:15px;font-weight:700;color:var(--sub);margin:-4px 0 0 38px;line-height:1.6}.sub3 .tx{color:var(--x)}.sub3 .ty{color:var(--y)}
-#jibun textarea{width:100%;flex:1;min-height:80px;font:inherit;font-size:22px;font-weight:700;border:3px dashed #c9b8a8;border-radius:14px;
+#jibun textarea{width:100%;flex:none;height:72px;font:inherit;font-size:22px;font-weight:700;border:3px dashed #c9b8a8;border-radius:14px;
   padding:10px;background:#fffbe8;color:var(--ink);resize:none;-webkit-user-select:text;user-select:text}
 .names{display:flex;gap:10px;flex-wrap:wrap}
 .names label{display:flex;align-items:center;gap:6px;font-weight:800}
 .names input{font:inherit;font-size:20px;font-weight:800;width:7em;border:3px solid;border-radius:12px;padding:4px 8px;
   -webkit-user-select:text;user-select:text}
 .names .lx input{border-color:var(--x);color:var(--x)}.names .ly input{border-color:var(--y);color:var(--y)}
+td.z{background:#fff8e1}
+td .none{display:block;margin:4px auto 0;border:2px solid #dde3ea;border-radius:999px;background:#fff;color:var(--sub);font:inherit;font-size:13px;padding:0 10px}
+td .none.on{background:#7a685f;border-color:#7a685f;color:#fff;font-size:18px;margin:0 auto}
+.hintbox{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.hintbox .tb{align-self:flex-start}
+.lamp{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;padding:6px 10px;border-radius:12px;background:#f3f6f9}
+.lamp .q .tx{color:var(--x)}.lamp .q .ty{color:var(--y)}
+.lamp .v{margin-left:auto;padding:2px 12px;border-radius:999px;color:#fff;background:#b8c2cc;white-space:nowrap}
+.lamp .v.yes{background:var(--mul)}.lamp .v.no{background:#e07a5f}.lamp .v.wait{background:#fff;color:var(--sub);border:2px dashed #c9d2db}
 .dot{display:inline-block;width:18px;height:18px;border-radius:50%}
 body.isJibun .pic,body.isJibun .xctl{display:none}
 body.isJibun #jibun{display:flex}
@@ -108,7 +117,11 @@ body.isJibun #jibun{display:flex}
         <label class="ly"><span class="dot" style="background:var(--y)"></span><input id="jy" placeholder="れい：1人分"></label>
       </div>
       <div class="stp" id="st3"><span class="no">3</span><span class="tt">右の表に 数を入れよう <b class="arrow">→</b></span></div>
-      <div class="sub3">点が グラフに 出るよ。そろったら <b class="ty">オレンジ</b>÷<b class="tx">青</b> と <b class="tx">青</b>×<b class="ty">オレンジ</b> で しらべよう</div>
+      <div class="sub3">はじめに <b>0のとき</b>を入れよう（ないときは「ない」）。点が グラフに 出るよ</div>
+      <div class="hintbox">
+        <button class="tb small" id="bhint">🔍 手がかりを見る</button>
+        <div id="lamps"></div>
+      </div>
     </div>
     <div class="card xctl">
       <button class="pm" id="minus">−</button>
@@ -173,9 +186,17 @@ const SC=[
 ];
 const st={};
 SC.forEach(s=>{ if(s.id!=='jibun') st[s.id]={x:s.x0,rows:new Map(),snap:true,p:{...s.p}}; });
-st.jibun={text:'',xs:'',ys:'',rows:[{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}]};
-let cur=SC[0],showDiv=false,showMul=false,showLine=false;
-try{const j=JSON.parse(localStorage.getItem('shiraberu-jibun')||'null');if(j&&j.rows)st.jibun=j}catch(e){}
+// じぶんの場面の表：1列目は「青が0のとき」で固定（0のときが「ない」場面もある）
+const blankRowsJ=()=>[{x:'0',y:'',zero:true,none:false},{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];
+st.jibun={text:'',xs:'',ys:'',rows:blankRowsJ()};
+let cur=SC[0],showDiv=false,showMul=false,showLine=false,showHint=false;
+try{const j=JSON.parse(localStorage.getItem('shiraberu-jibun')||'null');if(j&&j.rows){
+  if(!(j.rows[0]&&j.rows[0].zero)){ // 前の版で入れた表：0の列を先頭に足す（0を打った列があればそこへ移す）
+    const k=j.rows.findIndex(r=>String(r.x).trim()==='0');
+    const y=k>=0?j.rows.splice(k,1)[0].y:'';
+    j.rows.unshift({x:'0',y,zero:true,none:false});
+  }
+  st.jibun=j}}catch(e){}
 function saveJ(){try{localStorage.setItem('shiraberu-jibun',JSON.stringify(st.jibun))}catch(e){}}
 try{const v=JSON.parse(localStorage.getItem('shiraberu-view')||'null');if(v){showDiv=!!v.d;showMul=!!v.m;showLine=!!v.l}}catch(e){}
 function saveV(){try{localStorage.setItem('shiraberu-view',JSON.stringify({d:showDiv,m:showMul,l:showLine}))}catch(e){}}
@@ -255,7 +276,7 @@ function renderTable(){
 /* ---------- じぶんの場面 ---------- */
 function buildJibun(){
   const J=st.jibun;$('#jtext').value=J.text;$('#jx').value=J.xs;$('#jy').value=J.ys;
-  $('#snap').style.display='none';buildTableJ();render();showSentenceJ();
+  $('#snap').style.display='none';showHint=false;buildTableJ();render();showSentenceJ();
 }
 function stepsJ(){const J=st.jibun,d=[!!J.text.trim(),!!(J.xs.trim()&&J.ys.trim()),ptsJ().length>=2];
   const now=d.indexOf(false);[1,2,3].forEach(i=>{const e=$('#st'+i);e.classList.toggle('done',d[i-1]);e.classList.toggle('now',i-1===now)})}
@@ -267,19 +288,43 @@ const jx=()=>st.jibun.xs.trim()||'青', jy=()=>st.jibun.ys.trim()||'オレンジ
 const num=v=>{if(v===''||v===null)return null;const n=Number(String(v).replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));return isFinite(n)?n:null};
 function buildTableJ(){
   const J=st.jibun;let h='<table>';
-  h+=`<tr class="rx"><th><span class="cx">${esc(jx())}</span></th>`+J.rows.map((r,i)=>`<td><input inputmode="decimal" data-i="${i}" data-k="x" value="${esc(r.x)}"></td>`).join('')+'</tr>';
-  h+=`<tr class="ry"><th><span class="cy">${esc(jy())}</span></th>`+J.rows.map((r,i)=>`<td><input inputmode="decimal" data-i="${i}" data-k="y" value="${esc(r.y)}"></td>`).join('')+'</tr>';
+  h+=`<tr class="rx"><th><span class="cx">${esc(jx())}</span></th>`+J.rows.map((r,i)=>r.zero?'<td class="z">0</td>':`<td><input inputmode="decimal" data-i="${i}" data-k="x" value="${esc(r.x)}"></td>`).join('')+'</tr>';
+  h+=`<tr class="ry"><th><span class="cy">${esc(jy())}</span></th>`+J.rows.map((r,i)=>!r.zero?`<td><input inputmode="decimal" data-i="${i}" data-k="y" value="${esc(r.y)}"></td>`
+    :r.none?'<td class="z"><button class="none on" id="bnone">ない</button></td>'
+    :`<td class="z"><input inputmode="decimal" data-i="${i}" data-k="y" value="${esc(r.y)}"><button class="none" id="bnone">ない</button></td>`).join('')+'</tr>';
   if(showDiv)h+=`<tr class="rd"><th><span class="cy">${esc(jy())}</span> ÷ <span class="cx">${esc(jx())}</span></th>`+J.rows.map((r,i)=>`<td id="jd${i}"></td>`).join('')+'</tr>';
   if(showMul)h+=`<tr class="rm"><th><span class="cx">${esc(jx())}</span> × <span class="cy">${esc(jy())}</span></th>`+J.rows.map((r,i)=>`<td id="jm${i}"></td>`).join('')+'</tr>';
   h+='</table>';$('#twrap').innerHTML=h;
-  $('#twrap').querySelectorAll('input').forEach(inp=>{halfOnly(inp,true);inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ();stepsJ()}});
+  $('#twrap').querySelectorAll('input').forEach(inp=>{halfOnly(inp,true);inp.oninput=()=>{J.rows[inp.dataset.i][inp.dataset.k]=inp.value;saveJ();renderTableJ();drawGraphJ();stepsJ()};
+    inp.onkeydown=e=>{if(e.key!=='Enter'||e.isComposing)return;e.preventDefault();nextInputJ(Number(inp.dataset.i),inp.dataset.k)}});
+  const bn=$('#bnone');if(bn)bn.onclick=()=>{tap();const z=J.rows[0];z.none=!z.none;if(z.none)z.y='';saveJ();buildTableJ();drawGraphJ();stepsJ()};
   renderTableJ();
+}
+// Enter で 青→オレンジ→次の列の青 の順に進む（列が足りなければ足す）
+function nextInputJ(i,k){
+  const J=st.jibun;let ni=i,nk='y';
+  if(k==='y'){ni=i+1;nk='x';if(ni>=J.rows.length){J.rows.push({x:'',y:''});saveJ();buildTableJ();drawGraphJ()}}
+  const t=$(`#twrap input[data-i="${ni}"][data-k="${nk}"]`);if(t){t.focus();t.scrollIntoView({block:'nearest',inline:'nearest'})}
+}
+// 手がかりランプ：形を見分ける材料だけ出す。比例・反比例とは言わない（決めるのは子ども）
+const same=a=>a.length>=2&&a.every(v=>Math.abs(v-a[0])<=1e-9*Math.max(1,Math.abs(a[0])));
+function lampsJ(){
+  const box=$('#lamps');$('#bhint').textContent=showHint?'🙈 手がかりをかくす':'🔍 手がかりを見る';
+  if(!showHint){box.innerHTML='';return}
+  const z=st.jibun.rows[0],zy=num(z.y),ps=ptsJ().filter(p=>p.x>0);
+  const X=`<b class="tx">${esc(jx())}</b>`,Y=`<b class="ty">${esc(jy())}</b>`;
+  const lamp=(q,v,c)=>`<div class="lamp"><span class="q">${q}</span><span class="v ${c}">${v}</span></div>`;
+  const z0=z.none?['0のときは ない','no']:zy===null?['0のときを 入れてね','wait']:zy===0?['通る','yes']:[`通らない（0のとき ${fmt(zy)}）`,'no'];
+  const d=ps.map(p=>p.y/p.x),m=ps.map(p=>p.x*p.y);
+  const chk=a=>ps.length<2?['数を 2つ以上 入れてね','wait']:same(a)?[`そろう（いつも ${fmt(a[0])}）`,'yes']:['バラバラ','no'];
+  box.innerHTML=lamp('0のところを 通る？',...z0)+lamp(`${Y}÷${X} いつも同じ？`,...chk(d))+lamp(`${X}×${Y} いつも同じ？`,...chk(m));
 }
 function renderTableJ(){
   const J=st.jibun;
   $('#bdiv').classList.toggle('on',showDiv);$('#bmul').classList.toggle('on',showMul);$('#bline').classList.toggle('on',showLine);
   J.rows.forEach((r,i)=>{const x=num(r.x),y=num(r.y),ok=x!==null&&y!==null;
     const d=$('#jd'+i),m=$('#jm'+i);if(d)d.textContent=ok&&x!==0?fmt(y/x):'';if(m)m.textContent=ok?fmt(x*y):''});
+  lampsJ();
 }
 function ptsJ(){return st.jibun.rows.map(r=>({x:num(r.x),y:num(r.y)})).filter(p=>p.x!==null&&p.y!==null&&p.x>=0&&p.y>=0)}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -446,10 +491,11 @@ $('#slider').onchange=()=>{record();render()};
 $('#snap').onclick=()=>{tap();const S=st[cur.id];S.snap=!S.snap;S.x=nearest(cur,S.x);record();render()};
 const tog=f=>()=>{tap(900);f();saveV();if(cur.id==='jibun')buildTableJ();render()};
 $('#bdiv').onclick=tog(()=>showDiv=!showDiv);$('#bmul').onclick=tog(()=>showMul=!showMul);$('#bline').onclick=tog(()=>showLine=!showLine);
+$('#bhint').onclick=()=>{tap(900);showHint=!showHint;lampsJ()};
 $('#badd').onclick=()=>{tap();st.jibun.rows.push({x:'',y:''});saveJ();buildTableJ();drawGraphJ();const w=$('#twrap');w.scrollLeft=w.scrollWidth};
 $('#bclear').onclick=()=>{
   if(!confirm('表の数をけしますか？'))return;
-  if(cur.id==='jibun'){st.jibun.rows=[{x:'',y:''},{x:'',y:''},{x:'',y:''},{x:'',y:''}];saveJ();buildTableJ();drawGraphJ();stepsJ();return}
+  if(cur.id==='jibun'){st.jibun.rows=blankRowsJ();showHint=false;saveJ();buildTableJ();drawGraphJ();stepsJ();return}
   st[cur.id].rows.clear();record();render()};
 document.addEventListener('keydown',e=>{
   const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
